@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>المحفظة الذكية - تطبيق الجوال</title>
+    
+    <!-- PWA Settings -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <!-- Bootstrap 5 RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.rtl.min.css">
+    <!-- Google Fonts: Cairo -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.85);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --accent-color: #6366f1;
+            --accent-hover: #4f46e5;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --bottom-nav-height: 65px;
+        }
+
+        * {
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image: radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.12) 0px, transparent 50%), 
+                               radial-gradient(at 100% 100%, rgba(236, 72, 153, 0.12) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: var(--text-main);
+            font-family: 'Cairo', sans-serif;
+            min-height: 100vh;
+            padding-bottom: calc(var(--bottom-nav-height) + 20px);
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 18px;
+            box-shadow: 0 10px 20px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .form-control, .form-select {
+            background-color: rgba(15, 23, 42, 0.7);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-size: 0.95rem;
+        }
+
+        .form-control:focus, .form-select:focus {
+            background-color: rgba(15, 23, 42, 0.9);
+            border-color: var(--accent-color);
+            color: var(--text-main);
+            box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.25);
+        }
+
+        .form-select option { background-color: #1e293b; color: #fff; }
+
+        .btn-custom {
+            background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+            border: none;
+            color: white;
+            border-radius: 14px;
+            padding: 0.8rem 1.2rem;
+            font-weight: 700;
+            width: 100%;
+        }
+
+        .btn-custom:active {
+            transform: scale(0.98);
+        }
+
+        /* 📱 Bottom Navigation Bar for Mobile */
+        .mobile-bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--bottom-nav-height);
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-top: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        .nav-item-mobile {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            width: 20%;
+        }
+
+        .nav-item-mobile i {
+            font-size: 1.25rem;
+            margin-bottom: 2px;
+        }
+
+        .nav-item-mobile.active {
+            color: var(--accent-color);
+        }
+
+        .page-section { display: none; }
+        .page-section.active { display: block; animation: fadeIn 0.25s ease-in-out; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Mobile Record Item Cards */
+        .record-card {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            padding: 12px 15px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Login Screen Overlay */
+        #loginOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #0f172a;
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        @media print {
+            .no-print, .mobile-bottom-nav { display: none !important; }
+            body { background: #fff !important; color: #000 !important; padding: 0 !important; }
+            .glass-card { background: #fff !important; border: 1px solid #ccc !important; box-shadow: none !important; color: #000 !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1️⃣ شاشة الدخول (Login Screen) -->
+    <div id="loginOverlay">
+        <div class="glass-card p-4 text-center w-100" style="max-width: 380px;">
+            <div class="mb-4">
+                <div class="bg-primary bg-opacity-10 p-3 rounded-circle d-inline-block mb-2">
+                    <i class="fa-solid fa-wallet text-primary display-4"></i>
+                </div>
+                <h4 class="fw-bold">المحفظة الذكية</h4>
+                <p class="text-secondary small">أدخل رمز PIN لتسجيل الدخول</p>
+            </div>
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-3">
+                    <input type="password" id="loginPin" class="form-control text-center fs-3 tracking-widest" placeholder="••••" required maxlength="8" inputmode="numeric">
+                </div>
+                <div id="loginError" class="text-danger small mb-3" style="display: none;">رمز المرور غير صحيح!</div>
+                <button type="submit" class="btn btn-custom fs-6">دخول التطبيق <i class="fa-solid fa-arrow-left ms-2"></i></button>
+            </form>
+            <div class="mt-3 text-secondary small">الرمز الافتراضي: <code>1234</code></div>
+        </div>
+    </div>
+
+    <!-- Application Body -->
+    <div class="container py-3" id="appMain" style="display: none;">
+        
+        <!-- Top App Bar -->
+        <div class="d-flex justify-content-between align-items-center mb-3 px-1">
+            <div class="d-flex align-items-center gap-2">
+                <i class="fa-solid fa-wallet text-primary fs-4"></i>
+                <h5 class="fw-bold m-0">المحفظة الذكية</h5>
+            </div>
+            <button class="btn btn-sm btn-outline-danger rounded-pill px-3" onclick="logout()">
+                <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
+        </div>
+
+        <!-- 2️⃣ شاشة لوحة التحكم (Dashboard) -->
+        <section id="page-dashboard" class="page-section active">
+            <!-- Stat Cards Grid -->
+            <div class="row g-2 mb-3">
+                <div class="col-6">
+                    <div class="glass-card p-3 text-center">
+                        <span class="text-secondary small d-block mb-1">الإيرادات</span>
+                        <span class="fw-bold text-success fs-5" id="dashIncome">0.00</span>
+                        <small class="text-secondary d-block fs-7">ر.س</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="glass-card p-3 text-center">
+                        <span class="text-secondary small d-block mb-1">المصروفات</span>
+                        <span class="fw-bold text-danger fs-5" id="dashExpense">0.00</span>
+                        <small class="text-secondary d-block fs-7">ر.س</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="glass-card p-3 text-center">
+                        <span class="text-secondary small d-block mb-1">صافي الأرباح</span>
+                        <span class="fw-bold text-info fs-5" id="dashNet">0.00</span>
+                        <small class="text-secondary d-block fs-7">ر.س</small>
+                    </div>
+                </div>
+                <div class="col-6">
+                    <div class="glass-card p-3 text-center">
+                        <span class="text-secondary small d-block mb-1">تكاليف السيارة</span>
+                        <span class="fw-bold text-warning fs-5" id="dashCarCost">0.00</span>
+                        <small class="text-secondary d-block fs-7">ر.س</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chart Card -->
+            <div class="glass-card p-3 mb-3">
+                <h6 class="fw-bold mb-3 text-center fs-6">نسبة الإيراد مقابل المصروف</h6>
+                <canvas id="chartOverview" style="max-height: 200px;"></canvas>
+            </div>
+
+            <!-- Recent Activity list -->
+            <div class="glass-card p-3">
+                <h6 class="fw-bold mb-3 fs-6"><i class="fa-solid fa-clock-rotate-left me-1 text-primary"></i> أحدث المعاملات</h6>
+                <div id="dashRecentList"></div>
+            </div>
+        </section>
+
+        <!-- 3️⃣ شاشة الإيرادات (Incomes Page) -->
+        <section id="page-incomes" class="page-section">
+            <div class="glass-card p-3 mb-3">
+                <h6 class="fw-bold mb-3 text-success"><i class="fa-solid fa-circle-plus me-1"></i> إضافة إيراد جديد</h6>
+                <form id="formIncome" onsubmit="addTransaction(event, 'income')">
+                    <div class="mb-2">
+                        <label class="form-label small text-secondary">فئة الإيراد</label>
+                        <select class="form-select" id="incomeSubCat" required>
+                            <option value="راتب شهري 💵">راتب شهري 💵</option>
+                            <option value="عمل حر / مشروع 💻">عمل حر / مشروع 💻</option>
+                            <option value="استثمار وأرباح 📈">استثمار وأرباح 📈</option>
+                            <option value="مكافأة 🎁">مكافأة 🎁</option>
+                            <option value="إيرادات أخرى 💰">إيرادات أخرى 💰</option>
+                        </select>
+                    </div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small text-secondary">المبلغ (ر.س)</label>
+                            <input type="number" step="0.01" class="form-control" id="incomeAmount" placeholder="0.00" required inputmode="decimal">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-secondary">التاريخ</label>
+                            <input type="date" class="form-control" id="incomeDate" required>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="incomeNotes" placeholder="ملاحظات / المصدر...">
+                    </div>
+                    <button type="submit" class="btn btn-success w-100 fw-bold py-2"><i class="fa-solid fa-check me-1"></i> حفظ الإيراد</button>
+                </form>
+            </div>
+
+            <h6 class="fw-bold mb-2 fs-6 px-1">سجل الإيرادات المسجلة</h6>
+            <div id="incomeList"></div>
+        </section>
+
+        <!-- 4️⃣ شاشة المصروفات (Expenses Page) -->
+        <section id="page-expenses" class="page-section">
+            <div class="glass-card p-3 mb-3">
+                <h6 class="fw-bold mb-3 text-danger"><i class="fa-solid fa-circle-minus me-1"></i> إضافة مصروف جديد</h6>
+                <form id="formExpense" onsubmit="addTransaction(event, 'expense')">
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small text-secondary">التصنيف</label>
+                            <select class="form-select" id="expMainCat" onchange="updateExpenseSubCats()" required>
+                                <option value="personal">شخصي 👤</option>
+                                <option value="car">سيارة / وقود 🚗</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-secondary">الفئة الفرعية</label>
+                            <select class="form-select" id="expSubCat" onchange="toggleFuelGroup()" required></select>
+                        </div>
+                    </div>
+
+                    <!-- Car & Fuel Inputs -->
+                    <div id="fuelFields" style="display: none;">
+                        <div class="row g-2 mb-2">
+                            <div class="col-6">
+                                <label class="form-label small text-secondary">نوع الوقود</label>
+                                <select class="form-select" id="expFuelType" onchange="autoCalcLiters()">
+                                    <option value="91">بنزين 91</option>
+                                    <option value="95">بنزين 95</option>
+                                    <option value="diesel">ديزل</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small text-secondary">العداد (كم)</label>
+                                <input type="number" class="form-control" id="expKm" placeholder="120000" inputmode="numeric">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-2 mb-2">
+                        <div class="col-6">
+                            <label class="form-label small text-secondary">المبلغ (ر.س)</label>
+                            <input type="number" step="0.01" class="form-control" id="expAmount" placeholder="0.00" oninput="autoCalcLiters()" required inputmode="decimal">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label small text-secondary">التاريخ</label>
+                            <input type="date" class="form-control" id="expDate" required>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="text" class="form-control" id="expNotes" placeholder="مكان الشراء / الملاحظات...">
+                    </div>
+                    <button type="submit" class="btn btn-danger w-100 fw-bold py-2"><i class="fa-solid fa-check me-1"></i> حفظ المصروف</button>
+                </form>
+            </div>
+
+            <h6 class="fw-bold mb-2 fs-6 px-1">سجل المصروفات المسجلة</h6>
+            <div id="expenseList"></div>
+        </section>
+
+        <!-- 5️⃣ شاشة التقارير والطباعة (Reports Page) -->
+        <section id="page-reports" class="page-section">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="fw-bold m-0 text-info"><i class="fa-solid fa-file-invoice-dollar me-1"></i> الملخص المالي</h6>
+                <button class="btn btn-sm btn-custom w-auto px-3" onclick="window.print()"><i class="fa-solid fa-print"></i> طباعة</button>
+            </div>
+
+            <div class="glass-card p-3 mb-3">
+                <div class="row g-2 text-center">
+                    <div class="col-4">
+                        <small class="text-secondary d-block fs-7">الإيراد</small>
+                        <strong class="text-success small" id="repInc">0.00</strong>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-secondary d-block fs-7">المصروف</small>
+                        <strong class="text-danger small" id="repExp">0.00</strong>
+                    </div>
+                    <div class="col-4">
+                        <small class="text-secondary d-block fs-7">المتبقي</small>
+                        <strong class="text-info small" id="repNet">0.00</strong>
+                    </div>
+                </div>
+            </div>
+
+            <div id="reportFullList"></div>
+        </section>
+
+        <!-- 6️⃣ شاشة الإعدادات (Settings Page) -->
+        <section id="page-settings" class="page-section">
+            <h6 class="fw-bold mb-3 text-warning"><i class="fa-solid fa-gear me-1"></i> إعدادات التطبيق</h6>
+            
+            <div class="glass-card p-3 mb-3">
+                <h6 class="fw-bold mb-2 fs-6"><i class="fa-solid fa-key me-1 text-warning"></i> تغيير رمز PIN</h6>
+                <form id="pinForm" onsubmit="changePin(event)">
+                    <div class="mb-2">
+                        <input type="password" id="oldPin" class="form-control" placeholder="الرمز الحالي" required inputmode="numeric">
+                    </div>
+                    <div class="mb-3">
+                        <input type="password" id="newPin" class="form-control" placeholder="الرمز الجديد" required maxlength="8" inputmode="numeric">
+                    </div>
+                    <button type="submit" class="btn btn-warning w-100 fw-bold py-2">حفظ الرمز الجديد</button>
+                </form>
+            </div>
+
+            <div class="glass-card p-3 mb-3">
+                <h6 class="fw-bold mb-2 fs-6"><i class="fa-solid fa-gas-pump me-1 text-primary"></i> أسعار الوقود (ر.س/لتر)</h6>
+                <form id="fuelPriceForm" onsubmit="saveFuelPrices(event)">
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <label class="form-label fs-7 text-secondary">بنزين 91</label>
+                            <input type="number" step="0.01" class="form-control text-center" id="price91" required inputmode="decimal">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fs-7 text-secondary">بنزين 95</label>
+                            <input type="number" step="0.01" class="form-control text-center" id="price95" required inputmode="decimal">
+                        </div>
+                        <div class="col-4">
+                            <label class="form-label fs-7 text-secondary">ديزل</label>
+                            <input type="number" step="0.01" class="form-control text-center" id="priceDiesel" required inputmode="decimal">
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100 fw-bold py-2">تحديث الأسعار</button>
+                </form>
+            </div>
+
+            <div class="glass-card p-3 border-danger">
+                <h6 class="fw-bold text-danger mb-1 fs-6"><i class="fa-solid fa-trash me-1"></i> مسح البيانات</h6>
+                <p class="text-secondary fs-7 mb-2">حذف جميع العمليات المسجلة نهائياً من الجوال.</p>
+                <button class="btn btn-outline-danger w-100 py-2" onclick="clearAllData()">مسح كافة البيانات</button>
+            </div>
+        </section>
+
+    </div>
+
+    <!-- 📱 Mobile Bottom Navigation Bar -->
+    <nav class="mobile-bottom-nav no-print" id="bottomNav" style="display: none;">
+        <a href="#" class="nav-item-mobile active" onclick="switchPage('dashboard', this)">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>الرئيسية</span>
+        </a>
+        <a href="#" class="nav-item-mobile" onclick="switchPage('incomes', this)">
+            <i class="fa-solid fa-wallet"></i>
+            <span>الإيرادات</span>
+        </a>
+        <a href="#" class="nav-item-mobile" onclick="switchPage('expenses', this)">
+            <i class="fa-solid fa-receipt"></i>
+            <span>المصروفات</span>
+        </a>
+        <a href="#" class="nav-item-mobile" onclick="switchPage('reports', this)">
+            <i class="fa-solid fa-file-invoice"></i>
+            <span>التقارير</span>
+        </a>
+        <a href="#" class="nav-item-mobile" onclick="switchPage('settings', this)">
+            <i class="fa-solid fa-sliders"></i>
+            <span>الإعدادات</span>
+        </a>
+    </nav>
+
+    <!-- JavaScript Engine -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const STORAGE_KEY = 'app_financial_data_v4';
+        const PIN_KEY = 'app_user_pin_v4';
+        const FUEL_KEY = 'app_fuel_prices_v4';
+
+        const personalCategories = ['مطاعم ومقاهي ☕', 'سوبرماركت 🛒', 'فواتير واشتراكات 📄', 'صحة 💊', 'مصاريف أخرى 💳'];
+        const carCategories = ['وقود ⛽', 'صيانة وتغيير زيت 🛠️', 'غسيل 🧼', 'قطع غيار ⚙️', 'تأمين ورسوم 📋'];
+
+        let transactions = JSON.parse(localStorage.getItem(STORAGE_KEY)) || [];
+        let fuelPrices = JSON.parse(localStorage.getItem(FUEL_KEY)) || { 91: 2.18, 95: 2.33, diesel: 1.79 };
+        let userPin = localStorage.getItem(PIN_KEY) || '1234';
+        let mainChart = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('incomeDate').valueAsDate = new Date();
+            document.getElementById('expDate').valueAsDate = new Date();
+            
+            document.getElementById('price91').value = fuelPrices[91];
+            document.getElementById('price95').value = fuelPrices[95];
+            document.getElementById('priceDiesel').value = fuelPrices.diesel;
+
+            updateExpenseSubCats();
+        });
+
+        // 🔐 Security Login System
+        function handleLogin(e) {
+            e.preventDefault();
+            const inputPin = document.getElementById('loginPin').value;
+            if (inputPin === userPin) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('appMain').style.display = 'block';
+                document.getElementById('bottomNav').style.display = 'flex';
+                renderAllData();
+                initChart();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            document.getElementById('appMain').style.display = 'none';
+            document.getElementById('bottomNav').style.display = 'none';
+            document.getElementById('loginOverlay').style.display = 'flex';
+            document.getElementById('loginPin').value = '';
+            document.getElementById('loginError').style.display = 'none';
+        }
+
+        function changePin(e) {
+            e.preventDefault();
+            const oldP = document.getElementById('oldPin').value;
+            const newP = document.getElementById('newPin').value;
+
+            if (oldP === userPin) {
+                userPin = newP;
+                localStorage.setItem(PIN_KEY, newP);
+                alert('تم تغيير الرمز بنجاح!');
+                e.target.reset();
+            } else {
+                alert('الرمز الحالي غير صحيح!');
+            }
+        }
+
+        // 📱 Page Switcher Logic
+        function switchPage(pageId, el) {
+            document.querySelectorAll('.page-section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.nav-item-mobile').forEach(item => item.classList.remove('active'));
+
+            document.getElementById(`page-${pageId}`).classList.add('active');
+            if (el) el.classList.add('active');
+
+            renderAllData();
+        }
+
+        // 🚗 Expense Options Setup
+        function updateExpenseSubCats() {
+            const mainCat = document.getElementById('expMainCat').value;
+            const subSelect = document.getElementById('expSubCat');
+            subSelect.innerHTML = '';
+
+            const list = mainCat === 'personal' ? personalCategories : carCategories;
+            list.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item;
+                opt.innerText = item;
+                subSelect.appendChild(opt);
+            });
+            toggleFuelGroup();
+        }
+
+        function toggleFuelGroup() {
+            const mainCat = document.getElementById('expMainCat').value;
+            const subCat = document.getElementById('expSubCat').value;
+            const isFuel = mainCat === 'car' && subCat.includes('وقود');
+
+            document.getElementById('fuelFields').style.display = isFuel ? 'block' : 'none';
+            if (isFuel) autoCalcLiters();
+        }
+
+        function autoCalcLiters() {
+            const amount = parseFloat(document.getElementById('expAmount').value) || 0;
+            const fuelType = document.getElementById('expFuelType').value;
+            const price = fuelPrices[fuelType];
+        }
+
+        function saveFuelPrices(e) {
+            e.preventDefault();
+            fuelPrices[91] = parseFloat(document.getElementById('price91').value);
+            fuelPrices[95] = parseFloat(document.getElementById('price95').value);
+            fuelPrices.diesel = parseFloat(document.getElementById('priceDiesel').value);
+            localStorage.setItem(FUEL_KEY, JSON.stringify(fuelPrices));
+            alert('تم حفظ أسعار الوقود!');
+        }
+
+        // 💵 Transactions Handling
+        function addTransaction(e, type) {
+            e.preventDefault();
+
+            let entry = {
+                id: Date.now(),
+                type: type,
+                amount: type === 'income' ? parseFloat(document.getElementById('incomeAmount').value) : parseFloat(document.getElementById('expAmount').value),
+                date: type === 'income' ? document.getElementById('incomeDate').value : document.getElementById('expDate').value,
+                notes: type === 'income' ? document.getElementById('incomeNotes').value : document.getElementById('expNotes').value,
+                subCategory: type === 'income' ? document.getElementById('incomeSubCat').value : document.getElementById('expSubCat').value,
+                mainCategory: type === 'income' ? 'income' : document.getElementById('expMainCat').value,
+                km: (type === 'expense' && document.getElementById('expMainCat').value === 'car') ? (parseFloat(document.getElementById('expKm').value) || 0) : null
+            };
+
+            transactions.push(entry);
+            transactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+
+            e.target.reset();
+            if (type === 'income') document.getElementById('incomeDate').valueAsDate = new Date();
+            if (type === 'expense') {
+                document.getElementById('expDate').valueAsDate = new Date();
+                updateExpenseSubCats();
+            }
+
+            renderAllData();
+        }
+
+        function deleteTransaction(id) {
+            if (confirm('تأكيد حذف هذه العملية؟')) {
+                transactions = transactions.filter(t => t.id !== id);
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
+                renderAllData();
+            }
+        }
+
+        function clearAllData() {
+            if (confirm('هل تريد مسح جميع البيانات بشكل نهائي؟')) {
+                transactions = [];
+                localStorage.removeItem(STORAGE_KEY);
+                renderAllData();
+            }
+        }
+
+        // 📊 Render Interface Items (Mobile Card View)
+        function renderAllData() {
+            let totalIncome = 0;
+            let totalExpense = 0;
+            let carExpense = 0;
+
+            const incContainer = document.getElementById('incomeList');
+            const expContainer = document.getElementById('expenseList');
+            const repContainer = document.getElementById('reportFullList');
+            const recentContainer = document.getElementById('dashRecentList');
+
+            incContainer.innerHTML = '';
+            expContainer.innerHTML = '';
+            repContainer.innerHTML = '';
+            recentContainer.innerHTML = '';
+
+            transactions.forEach((item, index) => {
+                const isInc = item.type === 'income';
+                if (isInc) totalIncome += item.amount;
+                else {
+                    totalExpense += item.amount;
+                    if (item.mainCategory === 'car') carExpense += item.amount;
+                }
+
+                // Income Card Item
+                if (isInc) {
+                    incContainer.innerHTML += `
+                        <div class="record-card">
+                            <div>
+                                <div class="fw-bold small text-light">${item.subCategory}</div>
+                                <div class="text-secondary fs-7">${item.date} ${item.notes ? '• ' + item.notes : ''}</div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold text-success">+${item.amount.toFixed(2)}</span>
+                                <button class="btn btn-sm text-danger p-0 ms-1" onclick="deleteTransaction(${item.id})"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        </div>`;
+                } else {
+                    expContainer.innerHTML += `
+                        <div class="record-card">
+                            <div>
+                                <div class="fw-bold small text-light">${item.subCategory}</div>
+                                <div class="text-secondary fs-7">${item.date} ${item.notes ? '• ' + item.notes : ''}</div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="fw-bold text-danger">-${item.amount.toFixed(2)}</span>
+                                <button class="btn btn-sm text-danger p-0 ms-1" onclick="deleteTransaction(${item.id})"><i class="fa-solid fa-trash-can"></i></button>
+                            </div>
+                        </div>`;
+                }
+
+                // Full Report Card Item
+                repContainer.innerHTML += `
+                    <div class="record-card">
+                        <div>
+                            <span class="badge ${isInc ? 'bg-success' : 'bg-danger'} mb-1">${isInc ? 'إيراد' : 'مصروف'}</span>
+                            <div class="fw-bold small">${item.subCategory}</div>
+                            <div class="text-secondary fs-7">${item.date} ${item.notes ? '• ' + item.notes : ''} ${item.km ? ' ('+item.km+' كم)' : ''}</div>
+                        </div>
+                        <span class="${isInc ? 'text-success' : 'text-danger'} fw-bold">${isInc ? '+' : '-'}${item.amount.toFixed(2)}</span>
+                    </div>`;
+
+                // Dashboard Top 4 Recent Items
+                if (index < 4) {
+                    recentContainer.innerHTML += `
+                        <div class="record-card">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fa-solid ${isInc ? 'fa-arrow-down-left text-success' : 'fa-arrow-up-right text-danger'} fs-5"></i>
+                                <div>
+                                    <div class="fw-bold small">${item.subCategory}</div>
+                                    <div class="text-secondary fs-7">${item.date}</div>
+                                </div>
+                            </div>
+                            <span class="${isInc ? 'text-success' : 'text-danger'} fw-bold">${isInc ? '+' : '-'}${item.amount.toFixed(2)}</span>
+                        </div>`;
+                }
+            });
+
+            const netValue = totalIncome - totalExpense;
+
+            // Stat Cards Updates
+            document.getElementById('dashIncome').innerText = totalIncome.toFixed(2);
+            document.getElementById('dashExpense').innerText = totalExpense.toFixed(2);
+            document.getElementById('dashNet').innerText = netValue.toFixed(2);
+            document.getElementById('dashCarCost').innerText = carExpense.toFixed(2);
+
+            document.getElementById('repInc').innerText = `${totalIncome.toFixed(2)} ر.س`;
+            document.getElementById('repExp').innerText = `${totalExpense.toFixed(2)} ر.س`;
+            document.getElementById('repNet').innerText = `${netValue.toFixed(2)} ر.س`;
+
+            if (mainChart) updateChart(totalIncome, totalExpense);
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('chartOverview').getContext('2d');
+            mainChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['الإيرادات', 'المصروفات'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#10b981', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: '#f8fafc', font: { family: 'Cairo', size: 11 } } } }
+                }
+            });
+        }
+
+        function updateChart(inc, exp) {
+            mainChart.data.datasets[0].data = [inc, exp];
+            mainChart.update();
+        }
+    </script>
+</body>
+</html>
